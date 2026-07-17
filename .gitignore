@@ -11,3 +11,7 @@ __pycache__/
 # Archivos del sistema
 Thumbs.db
 .DS_Store
+
+# Archivos subidos por usuarios (no se suben al repo)
+uploads/*
+!uploads/.gitkeep

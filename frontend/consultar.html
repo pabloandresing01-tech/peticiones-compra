@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultar Solicitudes - Abastecimiento</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+    <div class="contenedor">
+        <h1>Consultar Solicitudes</h1>
+        <p class="subtitulo">Ingresa tu correo para ver el estado de tus solicitudes</p>
+
+        <div class="busqueda">
+            <label for="email-consulta">Correo electrónico</label>
+            <input type="email" id="email-consulta" placeholder="tucorreo@entrelagos.cl">
+            <button id="boton-buscar">Buscar</button>
+        </div>
+
+        <div id="resultados"></div>
+
+        <p class="enlace-volver"><a href="index.html">← Crear una nueva solicitud</a></p>
+    </div>
+
+    <script src="consultar.js"></script>
+</body>
+</html>

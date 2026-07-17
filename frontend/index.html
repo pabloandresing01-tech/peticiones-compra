@@ -32,8 +32,10 @@
             <label for="description">Descripción *</label>
             <textarea id="description" name="description" rows="3" required></textarea>
 
-            <label for="quantity">Cantidad</label>
-            <input type="number" id="quantity" name="quantity" min="1">
+            <div class="grupo-compra">
+                <label for="quantity">Cantidad</label>
+                <input type="number" id="quantity" name="quantity" min="1">
+            </div>
 
             <label for="tax_account">Cuenta contable *</label>
             <input type="text" id="tax_account" name="tax_account" required>
@@ -44,8 +46,20 @@
             <label for="due_date">Fecha límite *</label>
             <input type="date" id="due_date" name="due_date" required>
 
-            <label for="tech_references">Referencias técnicas</label>
-            <textarea id="tech_references" name="tech_references" rows="2"></textarea>
+            <div class="grupo-oc">
+                <label for="supplier">Nombre del proveedor</label>
+                <input type="text" id="supplier" name="supplier">
+            </div>
+
+            <div class="grupo-oc">
+                <label for="supplier_tax_id">RUT empresa</label>
+                <input type="text" id="supplier_tax_id" name="supplier_tax_id">
+            </div>
+
+            <div class="grupo-compra">
+                <label for="tech_references">Referencias técnicas</label>
+                <textarea id="tech_references" name="tech_references" rows="2"></textarea>
+            </div>
 
             <button type="submit">Enviar solicitud</button>
 

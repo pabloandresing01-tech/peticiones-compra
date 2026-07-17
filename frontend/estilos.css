@@ -80,3 +80,72 @@ button:hover {
     padding: 0;
     font-size: 15px;
 }
+
+.busqueda {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 24px;
+}
+
+.busqueda button {
+    margin-top: 16px;
+}
+
+.tarjeta-solicitud {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 14px;
+    background-color: #fafbfc;
+}
+
+.tarjeta-codigo {
+    font-weight: 700;
+    font-size: 16px;
+    color: #1a3a5c;
+}
+
+.tarjeta-fila {
+    font-size: 14px;
+    color: #4a5568;
+    margin-top: 6px;
+}
+
+.estado {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-top: 8px;
+}
+
+.estado-ingresada { background-color: #718096; }
+.estado-en_revision { background-color: #3182ce; }
+.estado-en_cotizacion { background-color: #3182ce; }
+.estado-aprobada { background-color: #38a169; }
+.estado-oc_emitida { background-color: #dd6b20; }
+.estado-en_transito { background-color: #dd6b20; }
+.estado-cerrada { background-color: #2f855a; }
+.estado-rechazada { background-color: #e53e3e; }
+.estado-devuelta { background-color: #e53e3e; }
+
+.enlace-volver {
+    margin-top: 24px;
+    font-size: 14px;
+}
+
+.enlace-volver a {
+    color: #2b6cb0;
+    text-decoration: none;
+}
+
+.grupo-compra, .grupo-oc {
+    display: none;
+    flex-direction: column;
+}
+
+.grupo-compra.visible, .grupo-oc.visible {
+    display: flex;
+}

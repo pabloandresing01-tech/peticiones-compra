@@ -1,5 +1,22 @@
 const API_URL = "http://127.0.0.1:8000";
 
+const selectTipo = document.getElementById("type");
+const gruposCompra = document.querySelectorAll(".grupo-compra");
+const gruposOC = document.querySelectorAll(".grupo-oc");
+
+selectTipo.addEventListener("change", function () {
+    const tipo = selectTipo.value;
+
+    gruposCompra.forEach(g => g.classList.remove("visible"));
+    gruposOC.forEach(g => g.classList.remove("visible"));
+
+    if (tipo === "compra") {
+        gruposCompra.forEach(g => g.classList.add("visible"));
+    } else if (tipo === "oc") {
+        gruposOC.forEach(g => g.classList.add("visible"));
+    }
+});
+
 const formulario = document.getElementById("formulario-solicitud");
 const mensajeResultado = document.getElementById("mensaje-resultado");
 

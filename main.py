@@ -1,10 +1,13 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Form, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Request, StatusHistory
-from schemas import RequestCreate
+from models import Request, StatusHistory, Attachment
+from schemas import RequestCreate, RequestOut
+from utils import generar_codigo, validar_archivo, guardar_archivo
+from typing import Optional
+from datetime import date
 from utils import generar_codigo
 
 app = FastAPI()
@@ -23,7 +26,46 @@ def leer_inicio():
 
 
 @app.post("/solicitudes")
-def crear_solicitud(datos: RequestCreate, db: Session = Depends(get_db)):
+def crear_solicitud(
+    type: str = Form(...),
+    requester_name: str = Form(...),
+    requester_email: str = Form(...),
+    area: str = Form(...),
+    description: str = Form(...),
+    tax_account: str = Form(...),
+    cost_center: str = Form(...),
+    due_date: date = Form(...),
+    quantity: Optional[int] = Form(None),
+    tech_references: Optional[str] = Form(None),
+    supplier: Optional[str] = Form(None),
+    supplier_tax_id: Optional[str] = Form(None),
+    archivos: Optional[list[UploadFile]] = File(None),
+    db: Session = Depends(get_db),
+):
+    datos = RequestCreate(
+        type=type,
+        requester_name=requester_name,
+        requester_email=requester_email,
+        area=area,
+        description=description,
+        tax_account=tax_account,
+        cost_center=cost_center,
+        due_date=due_date,
+        quantity=quantity,
+        tech_references=tech_references,
+        supplier=supplier,
+        supplier_tax_id=supplier_tax_id,
+    )
+
+    if archivos is None:
+        archivos = []
+
+    if datos.type == "oc" and len(archivos) == 0:
+        raise HTTPException(status_code=400, detail="La cotización es obligatoria para solicitudes de OC")
+
+    for archivo in archivos:
+        validar_archivo(archivo)
+
     codigo = generar_codigo(db, datos.type)
 
     nueva_solicitud = Request(
@@ -41,8 +83,8 @@ def crear_solicitud(datos: RequestCreate, db: Session = Depends(get_db)):
         supplier_tax_id=datos.supplier_tax_id,
         tech_references=datos.tech_references,
     )
-
     db.add(nueva_solicitud)
+    db.flush()
 
     primer_historial = StatusHistory(
         request_code=codigo,
@@ -53,7 +95,23 @@ def crear_solicitud(datos: RequestCreate, db: Session = Depends(get_db)):
     )
     db.add(primer_historial)
 
+    for archivo in archivos:
+        info = guardar_archivo(archivo)
+        adjunto = Attachment(
+            request_code=codigo,
+            file_url=info["file_url"],
+            file_name=info["file_name"],
+        )
+        db.add(adjunto)
+
     db.commit()
     db.refresh(nueva_solicitud)
 
     return {"mensaje": "Solicitud creada correctamente", "codigo": codigo}
+
+@app.get("/solicitudes", response_model=list[RequestOut])
+def consultar_solicitudes(email: str, db: Session = Depends(get_db)):
+    email_normalizado = email.lower().strip()
+    solicitudes = db.query(Request).filter(Request.requester_email == email_normalizado).all()
+    return solicitudes
+
