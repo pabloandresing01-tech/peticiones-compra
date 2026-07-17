@@ -1,11 +1,13 @@
-from fastapi import FastAPI, Depends, HTTPException, Form, File, UploadFile
+from fastapi import FastAPI, Depends, HTTPException, Form, File, UploadFile, Header
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Request, StatusHistory, Attachment
-from schemas import RequestCreate, RequestOut
+from models import Request, StatusHistory, Attachment, Buyer
+from schemas import RequestCreate, RequestOut, LoginRequest, TokenResponse
 from utils import generar_codigo, validar_archivo, guardar_archivo
+from security import verificar_password, crear_token, verificar_token
 from typing import Optional
 from datetime import date
 from utils import generar_codigo
@@ -19,6 +21,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+security_scheme = HTTPBearer()
+
+
+def obtener_comprador_actual(
+    credenciales: HTTPAuthorizationCredentials = Depends(security_scheme),
+    db: Session = Depends(get_db),
+):
+    token = credenciales.credentials
+    email = verificar_token(token)
+
+    if email is None:
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+
+    comprador = db.query(Buyer).filter(Buyer.email == email).first()
+    if comprador is None:
+        raise HTTPException(status_code=401, detail="Comprador no encontrado")
+
+    return comprador
 
 @app.get("/")
 def leer_inicio():
@@ -115,3 +135,21 @@ def consultar_solicitudes(email: str, db: Session = Depends(get_db)):
     solicitudes = db.query(Request).filter(Request.requester_email == email_normalizado).all()
     return solicitudes
 
+@app.post("/login", response_model=TokenResponse)
+def login(datos: LoginRequest, db: Session = Depends(get_db)):
+    email = datos.email.lower().strip()
+    comprador = db.query(Buyer).filter(Buyer.email == email).first()
+
+    if not comprador:
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+
+    if not verificar_password(datos.password, comprador.password_hash):
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+
+    token = crear_token({"sub": comprador.email})
+
+    return {"access_token": token, "token_type": "bearer"}
+
+@app.get("/perfil")
+def ver_perfil(comprador: Buyer = Depends(obtener_comprador_actual)):
+    return {"nombre": comprador.name, "email": comprador.email}
