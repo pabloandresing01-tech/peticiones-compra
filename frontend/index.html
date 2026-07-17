@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitud de Compra - Abastecimiento</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+    <div class="contenedor">
+        <h1>Solicitud de Compra/OC</h1>
+        <p class="subtitulo">Área de Abastecimiento - Entrelagos</p>
+
+        <form id="formulario-solicitud">
+
+            <label for="type">Tipo de solicitud *</label>
+            <select id="type" name="type" required>
+                <option value="">Selecciona una opción</option>
+                <option value="compra">Solicitud de Compra</option>
+                <option value="oc">Solicitud de OC</option>
+            </select>
+
+            <label for="requester_name">Nombre del solicitante *</label>
+            <input type="text" id="requester_name" name="requester_name" required>
+
+            <label for="requester_email">Correo electrónico *</label>
+            <input type="email" id="requester_email" name="requester_email" required>
+
+            <label for="area">Área *</label>
+            <input type="text" id="area" name="area" required>
+
+            <label for="description">Descripción *</label>
+            <textarea id="description" name="description" rows="3" required></textarea>
+
+            <label for="quantity">Cantidad</label>
+            <input type="number" id="quantity" name="quantity" min="1">
+
+            <label for="tax_account">Cuenta contable *</label>
+            <input type="text" id="tax_account" name="tax_account" required>
+
+            <label for="cost_center">Centro de costo *</label>
+            <input type="text" id="cost_center" name="cost_center" required>
+
+            <label for="due_date">Fecha límite *</label>
+            <input type="date" id="due_date" name="due_date" required>
+
+            <label for="tech_references">Referencias técnicas</label>
+            <textarea id="tech_references" name="tech_references" rows="2"></textarea>
+
+            <button type="submit">Enviar solicitud</button>
+
+        </form>
+
+        <div id="mensaje-resultado"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
