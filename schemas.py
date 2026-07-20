@@ -68,3 +68,7 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    
+class CambioEstado(BaseModel):
+    nuevo_estado: str
+    comentario: Optional[str] = None  

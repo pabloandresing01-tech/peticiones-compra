@@ -41,3 +41,15 @@ def guardar_archivo(archivo: UploadFile) -> dict:
         f.write(contenido)
 
     return {"file_url": ruta_completa, "file_name": archivo.filename}
+
+ESTADOS_VALIDOS = {
+    "ingresada",
+    "en_revision",
+    "en_cotizacion",
+    "aprobada",
+    "oc_emitida",
+    "en_transito",
+    "cerrada",
+    "rechazada",
+    "devuelta",
+}

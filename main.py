@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Request, StatusHistory, Attachment, Buyer
-from schemas import RequestCreate, RequestOut, LoginRequest, TokenResponse
-from utils import generar_codigo, validar_archivo, guardar_archivo
+from schemas import RequestCreate, RequestOut, LoginRequest, TokenResponse, CambioEstado
+from utils import generar_codigo, validar_archivo, guardar_archivo, ESTADOS_VALIDOS
 from security import verificar_password, crear_token, verificar_token
 from typing import Optional
 from datetime import date
@@ -151,5 +151,46 @@ def login(datos: LoginRequest, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer"}
 
 @app.get("/perfil")
-def ver_perfil(comprador: Buyer = Depends(obtener_comprador_actual)):
+def ver_perfil(comprador: Buyer = Depends(obtener_comprador_actual)):  #Comprobar funcionamiento de la autenticación
     return {"nombre": comprador.name, "email": comprador.email}
+
+@app.get("/panel/solicitudes", response_model=list[RequestOut])
+def listar_todas_solicitudes(
+    comprador: Buyer = Depends(obtener_comprador_actual),
+    db: Session = Depends(get_db),
+):
+    solicitudes = db.query(Request).order_by(Request.created_at.desc()).all()
+    return solicitudes
+
+@app.patch("/panel/solicitudes/{codigo}/estado")
+def cambiar_estado(
+    codigo: str,
+    datos: CambioEstado,
+    comprador: Buyer = Depends(obtener_comprador_actual),
+    db: Session = Depends(get_db),
+):
+    if datos.nuevo_estado not in ESTADOS_VALIDOS:
+        raise HTTPException(status_code=400, detail="Estado no válido")
+
+    solicitud = db.query(Request).filter(Request.code == codigo).first()
+    if solicitud is None:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+    estado_anterior = solicitud.status
+    solicitud.status = datos.nuevo_estado
+
+    if solicitud.buyer_id is None:
+        solicitud.buyer_id = comprador.id
+
+    registro = StatusHistory(
+        request_code=codigo,
+        old_status=estado_anterior,
+        new_status=datos.nuevo_estado,
+        comment=datos.comentario,
+        changed_by=comprador.email,
+    )
+    db.add(registro)
+
+    db.commit()
+
+    return {"mensaje": "Estado actualizado", "codigo": codigo, "nuevo_estado": datos.nuevo_estado}
