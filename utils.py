@@ -53,3 +53,26 @@ ESTADOS_VALIDOS = {
     "rechazada",
     "devuelta",
 }
+
+import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
+
+N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL")
+
+
+def notificar_cambio_estado(codigo: str, nuevo_estado: str, email: str) -> None:
+    if not N8N_WEBHOOK_URL:
+        return
+
+    datos = {
+        "codigo": codigo,
+        "nuevo_estado": nuevo_estado,
+        "email": email,
+    }
+
+    try:
+        httpx.post(N8N_WEBHOOK_URL, json=datos, timeout=5.0)
+    except Exception:
+        pass

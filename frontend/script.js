@@ -23,26 +23,40 @@ const mensajeResultado = document.getElementById("mensaje-resultado");
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault();
 
-    const datos = {
-        type: document.getElementById("type").value,
-        requester_name: document.getElementById("requester_name").value,
-        requester_email: document.getElementById("requester_email").value,
-        area: document.getElementById("area").value,
-        description: document.getElementById("description").value,
-        quantity: document.getElementById("quantity").value || null,
-        tax_account: document.getElementById("tax_account").value,
-        cost_center: document.getElementById("cost_center").value,
-        due_date: document.getElementById("due_date").value,
-        tech_references: document.getElementById("tech_references").value || null,
-    };
+    const tipo = document.getElementById("type").value;
+
+    const formData = new FormData();
+    formData.append("type", tipo);
+    formData.append("requester_name", document.getElementById("requester_name").value);
+    formData.append("requester_email", document.getElementById("requester_email").value);
+    formData.append("area", document.getElementById("area").value);
+    formData.append("description", document.getElementById("description").value);
+    formData.append("tax_account", document.getElementById("tax_account").value);
+    formData.append("cost_center", document.getElementById("cost_center").value);
+    formData.append("due_date", document.getElementById("due_date").value);
+
+    if (tipo === "compra") {
+        formData.append("quantity", document.getElementById("quantity").value);
+        formData.append("tech_references", document.getElementById("tech_references").value);
+    }
+
+    if (tipo === "oc") {
+        formData.append("supplier", document.getElementById("supplier").value);
+        formData.append("supplier_tax_id", document.getElementById("supplier_tax_id").value);
+    }
+
+    const inputArchivos = tipo === "oc"
+        ? document.getElementById("archivos-oc")
+        : document.getElementById("archivos-compra");
+
+    for (const archivo of inputArchivos.files) {
+        formData.append("archivos", archivo);
+    }
 
     try {
         const respuesta = await fetch(`${API_URL}/solicitudes`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(datos),
+            body: formData,
         });
 
         if (respuesta.ok) {

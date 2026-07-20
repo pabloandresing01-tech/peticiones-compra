@@ -149,3 +149,83 @@ button:hover {
 .grupo-compra.visible, .grupo-oc.visible {
     display: flex;
 }
+
+.contenedor-ancho {
+    max-width: 900px;
+}
+
+.cabecera-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.boton-secundario {
+    margin-top: 0;
+    padding: 8px 16px;
+    background-color: #e2e8f0;
+    color: #2d3748;
+    font-size: 14px;
+}
+
+.boton-secundario:hover {
+    background-color: #cbd5e0;
+}
+
+.acciones-estado {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.acciones-estado select {
+    flex: 1;
+    min-width: 160px;
+}
+
+.boton-cambiar {
+    margin-top: 0;
+    padding: 10px 16px;
+    font-size: 14px;
+}
+
+.boton-detalle {
+    margin-top: 10px;
+    padding: 6px 12px;
+    background-color: #edf2f7;
+    color: #2d3748;
+    font-size: 13px;
+}
+
+.boton-detalle:hover {
+    background-color: #e2e8f0;
+}
+
+.detalle-bloque {
+    margin-top: 12px;
+    padding: 14px;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.detalle-item {
+    font-size: 14px;
+    color: #4a5568;
+    margin-bottom: 6px;
+}
+
+.historial-item {
+    font-size: 13px;
+    color: #718096;
+    padding-left: 12px;
+}
+
+.enlace-archivo {
+    color: #2b6cb0;
+    text-decoration: underline;
+    cursor: pointer;
+}

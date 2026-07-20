@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, field_validator, model_validator
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 
@@ -71,4 +71,25 @@ class TokenResponse(BaseModel):
     
 class CambioEstado(BaseModel):
     nuevo_estado: str
-    comentario: Optional[str] = None  
+    comentario: Optional[str] = None
+    
+class AttachmentOut(BaseModel):
+    id: int
+    file_name: str
+
+    class Config:
+        from_attributes = True
+
+class StatusHistoryOut(BaseModel):
+    old_status: Optional[str] = None
+    new_status: str
+    comment: Optional[str] = None
+    changed_by: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class RequestDetail(RequestOut):
+    attachments: list[AttachmentOut] = []
+    history: list[StatusHistoryOut] = []

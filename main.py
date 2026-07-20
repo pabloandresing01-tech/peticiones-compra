@@ -1,16 +1,19 @@
 from fastapi import FastAPI, Depends, HTTPException, Form, File, UploadFile, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+import os 
 
 from database import get_db
 from models import Request, StatusHistory, Attachment, Buyer
-from schemas import RequestCreate, RequestOut, LoginRequest, TokenResponse, CambioEstado
-from utils import generar_codigo, validar_archivo, guardar_archivo, ESTADOS_VALIDOS
+from schemas import RequestCreate, RequestOut, LoginRequest, TokenResponse, CambioEstado, RequestDetail, AttachmentOut, StatusHistoryOut
+from utils import generar_codigo, validar_archivo, guardar_archivo, ESTADOS_VALIDOS, notificar_cambio_estado
 from security import verificar_password, crear_token, verificar_token
 from typing import Optional
 from datetime import date
 from utils import generar_codigo
+
 
 app = FastAPI()
 app.add_middleware(
@@ -193,4 +196,49 @@ def cambiar_estado(
 
     db.commit()
 
+    notificar_cambio_estado(codigo, datos.nuevo_estado, solicitud.requester_email)
+
     return {"mensaje": "Estado actualizado", "codigo": codigo, "nuevo_estado": datos.nuevo_estado}
+
+@app.get("/panel/solicitudes/{codigo}", response_model=RequestDetail)
+def detalle_solicitud(
+    codigo: str,
+    comprador: Buyer = Depends(obtener_comprador_actual),
+    db: Session = Depends(get_db),
+):
+    solicitud = db.query(Request).filter(Request.code == codigo).first()
+    if solicitud is None:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+    adjuntos = db.query(Attachment).filter(Attachment.request_code == codigo).all()
+
+    historial = (
+        db.query(StatusHistory)
+        .filter(StatusHistory.request_code == codigo)
+        .order_by(StatusHistory.created_at.asc())
+        .all()
+    )
+
+    detalle = RequestDetail.model_validate(solicitud)
+    detalle.attachments = [AttachmentOut.model_validate(a) for a in adjuntos]
+    detalle.history = [StatusHistoryOut.model_validate(h) for h in historial]
+
+    return detalle
+
+@app.get("/panel/archivos/{archivo_id}")
+def descargar_archivo(
+    archivo_id: int,
+    comprador: Buyer = Depends(obtener_comprador_actual),
+    db: Session = Depends(get_db),
+):
+    adjunto = db.query(Attachment).filter(Attachment.id == archivo_id).first()
+    if adjunto is None:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+
+    if not os.path.exists(adjunto.file_url):
+        raise HTTPException(status_code=404, detail="El archivo ya no está disponible")
+
+    return FileResponse(
+        path=adjunto.file_url,
+        filename=adjunto.file_name,
+    )
