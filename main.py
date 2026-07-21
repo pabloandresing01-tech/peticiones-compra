@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Form, File, UploadFile, Header
+from fastapi import FastAPI, Depends, HTTPException, Form, File, UploadFile
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -12,7 +12,6 @@ from utils import generar_codigo, validar_archivo, guardar_archivo, ESTADOS_VALI
 from security import verificar_password, crear_token, verificar_token
 from typing import Optional
 from datetime import date
-from utils import generar_codigo
 
 
 app = FastAPI()
@@ -87,7 +86,10 @@ def crear_solicitud(
         raise HTTPException(status_code=400, detail="La cotización es obligatoria para solicitudes de OC")
 
     for archivo in archivos:
-        validar_archivo(archivo)
+        try:
+            validar_archivo(archivo)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
     codigo = generar_codigo(db, datos.type)
 
@@ -112,14 +114,18 @@ def crear_solicitud(
     primer_historial = StatusHistory(
         request_code=codigo,
         old_status=None,
-        new_status="ingresada",
+        new_status="en_revision",
         comment="Solicitud creada",
         changed_by=datos.requester_email,
     )
+    
     db.add(primer_historial)
 
     for archivo in archivos:
-        info = guardar_archivo(archivo)
+        try:
+            info = guardar_archivo(archivo)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         adjunto = Attachment(
             request_code=codigo,
             file_url=info["file_url"],
@@ -136,7 +142,22 @@ def crear_solicitud(
 def consultar_solicitudes(email: str, db: Session = Depends(get_db)):
     email_normalizado = email.lower().strip()
     solicitudes = db.query(Request).filter(Request.requester_email == email_normalizado).all()
-    return solicitudes
+
+    resultado = []
+    for s in solicitudes:
+        item = RequestOut.model_validate(s)
+        if s.status in {"rechazada", "cancelada"}:
+            ultimo = (
+                db.query(StatusHistory)
+                .filter(StatusHistory.request_code == s.code)
+                .order_by(StatusHistory.created_at.desc())
+                .first()
+            )
+            if ultimo and ultimo.comment:
+                item.last_comment = ultimo.comment
+        resultado.append(item)
+
+    return resultado
 
 @app.post("/login", response_model=TokenResponse)
 def login(datos: LoginRequest, db: Session = Depends(get_db)):
@@ -163,7 +184,22 @@ def listar_todas_solicitudes(
     db: Session = Depends(get_db),
 ):
     solicitudes = db.query(Request).order_by(Request.created_at.desc()).all()
-    return solicitudes
+
+    resultado = []
+    for s in solicitudes:
+        item = RequestOut.model_validate(s)
+        if s.status in {"rechazada", "cancelada"}:
+            ultimo = (
+                db.query(StatusHistory)
+                .filter(StatusHistory.request_code == s.code)
+                .order_by(StatusHistory.created_at.desc())
+                .first()
+            )
+            if ultimo and ultimo.comment:
+                item.last_comment = ultimo.comment
+        resultado.append(item)
+
+    return resultado
 
 @app.patch("/panel/solicitudes/{codigo}/estado")
 def cambiar_estado(
@@ -174,7 +210,13 @@ def cambiar_estado(
 ):
     if datos.nuevo_estado not in ESTADOS_VALIDOS:
         raise HTTPException(status_code=400, detail="Estado no válido")
-
+    
+    if datos.nuevo_estado in {"rechazada", "cancelada"} and not datos.comentario:
+        raise HTTPException(
+            status_code=400,
+            detail="Debes indicar el motivo cuando rechazas o cancelas una solicitud",
+        )
+        
     solicitud = db.query(Request).filter(Request.code == codigo).first()
     if solicitud is None:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
@@ -196,7 +238,7 @@ def cambiar_estado(
 
     db.commit()
 
-    notificar_cambio_estado(codigo, datos.nuevo_estado, solicitud.requester_email)
+    notificar_cambio_estado(codigo, datos.nuevo_estado, solicitud.requester_email, datos.comentario)
 
     return {"mensaje": "Estado actualizado", "codigo": codigo, "nuevo_estado": datos.nuevo_estado}
 

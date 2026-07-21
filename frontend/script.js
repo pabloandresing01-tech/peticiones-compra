@@ -4,6 +4,27 @@ const selectTipo = document.getElementById("type");
 const gruposCompra = document.querySelectorAll(".grupo-compra");
 const gruposOC = document.querySelectorAll(".grupo-oc");
 
+const inputFecha = document.getElementById("due_date");
+const ayudaFecha = document.getElementById("ayuda-fecha");
+
+function actualizarFechaMinima(tipo) {
+    if (tipo === "") {
+        inputFecha.min = "";
+        ayudaFecha.textContent = "";
+        return;
+    }
+
+    const dias = tipo === "compra" ? 5 : 3;
+    const fechaMinima = new Date();
+    fechaMinima.setDate(fechaMinima.getDate() + dias);
+    inputFecha.min = fechaMinima.toISOString().split("T")[0];
+    ayudaFecha.textContent = `(mínimo ${dias} días desde hoy)`;
+
+    if (inputFecha.value && inputFecha.value < inputFecha.min) {
+        inputFecha.value = "";
+    }
+}
+
 selectTipo.addEventListener("change", function () {
     const tipo = selectTipo.value;
 
@@ -15,6 +36,8 @@ selectTipo.addEventListener("change", function () {
     } else if (tipo === "oc") {
         gruposOC.forEach(g => g.classList.add("visible"));
     }
+
+    actualizarFechaMinima(tipo);
 });
 
 const formulario = document.getElementById("formulario-solicitud");

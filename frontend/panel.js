@@ -9,17 +9,19 @@ if (!token) {
 const listaSolicitudes = document.getElementById("lista-solicitudes");
 const sesionUsuario = document.getElementById("sesion-usuario");
 const botonSalir = document.getElementById("boton-salir");
+const buscador = document.getElementById("buscador");
+const filtroEstado = document.getElementById("filtro-estado");
+
+let todasLasSolicitudes = [];
 
 const nombresEstado = {
-    ingresada: "Ingresada",
     en_revision: "En revisión",
     en_cotizacion: "En cotización",
-    aprobada: "Aprobada",
-    oc_emitida: "OC emitida",
     en_transito: "En tránsito",
-    cerrada: "Cerrada",
+    completada: "Completada",
+    creada: "Creada",
     rechazada: "Rechazada",
-    devuelta: "Devuelta",
+    cancelada: "Cancelada",
 };
 
 botonSalir.addEventListener("click", function () {
@@ -55,71 +57,122 @@ async function cargarSolicitudes() {
             return;
         }
 
-        const solicitudes = await respuesta.json();
-
-        if (solicitudes.length === 0) {
-            listaSolicitudes.innerHTML = "<p>No hay solicitudes registradas.</p>";
-            return;
-        }
-
-        listaSolicitudes.innerHTML = "";
-
-        solicitudes.forEach(function (s) {
-            const nombreEstado = nombresEstado[s.status] || s.status;
-            const tipoTexto = s.type === "compra" ? "Solicitud de Compra" : "Solicitud de OC";
-
-            const tarjeta = document.createElement("div");
-            tarjeta.className = "tarjeta-solicitud";
-            tarjeta.innerHTML = `
-                <div class="tarjeta-codigo">${s.code}</div>
-                <div class="tarjeta-fila"><strong>${tipoTexto}</strong> · ${s.area}</div>
-                <div class="tarjeta-fila">${s.description}</div>
-                <div class="tarjeta-fila">Solicitante: ${s.requester_name} (${s.requester_email})</div>
-                <div class="tarjeta-fila">Fecha límite: ${s.due_date}</div>
-                <span class="estado estado-${s.status}">${nombreEstado}</span>
-                <button class="boton-detalle" data-codigo="${s.code}">Ver detalle</button>
-                <div class="detalle-solicitud" id="detalle-${s.code}"></div>
-                <div class="acciones-estado">
-                    <select id="select-${s.code}">
-                        <option value="">Cambiar estado a...</option>
-                        <option value="en_revision">En revisión</option>
-                        <option value="en_cotizacion">En cotización</option>
-                        <option value="aprobada">Aprobada</option>
-                        <option value="oc_emitida">OC emitida</option>
-                        <option value="en_transito">En tránsito</option>
-                        <option value="cerrada">Cerrada</option>
-                        <option value="rechazada">Rechazada</option>
-                        <option value="devuelta">Devuelta</option>
-                    </select>
-                    <button class="boton-cambiar" data-codigo="${s.code}">Actualizar</button>
-                </div>
-            `;
-            listaSolicitudes.appendChild(tarjeta);
-        });
-
-        document.querySelectorAll(".boton-detalle").forEach(function (boton) {
-            boton.addEventListener("click", function () {
-                const codigo = boton.getAttribute("data-codigo");
-                mostrarDetalle(codigo);
-            });
-        });
-        document.querySelectorAll(".boton-cambiar").forEach(function (boton) {
-            boton.addEventListener("click", function () {
-                const codigo = boton.getAttribute("data-codigo");
-                const select = document.getElementById(`select-${codigo}`);
-                cambiarEstado(codigo, select.value);
-            });
-        });
+        todasLasSolicitudes = await respuesta.json();
+        dibujarSolicitudes();
 
     } catch (error) {
         listaSolicitudes.innerHTML = "<p style='color:#c53030;'>No se pudo conectar con el servidor.</p>";
     }
 }
 
+function dibujarSolicitudes() {
+    const texto = buscador.value.trim().toLowerCase();
+    const estado = filtroEstado.value;
+
+    const filtradas = todasLasSolicitudes.filter(function (s) {
+        const coincideTexto =
+            texto === "" ||
+            s.code.toLowerCase().includes(texto) ||
+            s.requester_email.toLowerCase().includes(texto);
+
+        const estadosFinales = ["completada", "creada", "rechazada", "cancelada"];
+        const coincideEstado =
+            estado === "" ? !estadosFinales.includes(s.status) : s.status === estado;
+
+        return coincideTexto && coincideEstado;
+    });
+
+    if (todasLasSolicitudes.length === 0) {
+        listaSolicitudes.innerHTML = "<p>No hay solicitudes registradas.</p>";
+        return;
+    }
+
+    if (filtradas.length === 0) {
+        listaSolicitudes.innerHTML = "<p>No se encontraron solicitudes con esos criterios.</p>";
+        return;
+    }
+
+    let html = `<div class="contador-resultados">Mostrando ${filtradas.length} de ${todasLasSolicitudes.length} solicitudes</div>`;
+    listaSolicitudes.innerHTML = html;
+
+    filtradas.forEach(function (s) {
+        const nombreEstado = nombresEstado[s.status] || s.status;
+        const tipoTexto = s.type === "compra" ? "Solicitud de Compra" : "Solicitud de OC";
+
+        const tarjeta = document.createElement("div");
+        tarjeta.className = "tarjeta-solicitud";
+
+        let motivoHtml = "";
+        if (s.last_comment) {
+            motivoHtml = `<div class="tarjeta-fila motivo-rechazo"><strong>Motivo:</strong> ${s.last_comment}</div>`;
+        }
+
+        tarjeta.innerHTML = `
+            <div class="tarjeta-codigo">${s.code}</div>
+            <div class="tarjeta-fila"><strong>${tipoTexto}</strong> · ${s.area}</div>
+            <div class="tarjeta-fila">${s.description}</div>
+            <div class="tarjeta-fila">Solicitante: ${s.requester_name} (${s.requester_email})</div>
+            <div class="tarjeta-fila">Fecha límite: ${s.due_date}</div>
+            <span class="estado estado-${s.status}">${nombreEstado}</span>
+            ${motivoHtml}
+            <button class="boton-detalle" data-codigo="${s.code}">Ver detalle</button>
+            <div class="detalle-solicitud" id="detalle-${s.code}"></div>
+            <div class="acciones-estado">
+                <select id="select-${s.code}">
+                    <option value="">Cambiar estado a...</option>
+                    <option value="en_revision">En revisión</option>
+                    <option value="en_cotizacion">En cotización</option>
+                    <option value="en_transito">En tránsito</option>
+                    <option value="completada">Completada</option>
+                    <option value="creada">Creada</option>
+                    <option value="rechazada">Rechazada</option>
+                    <option value="cancelada">Cancelada</option>
+                </select>
+                <button class="boton-cambiar" data-codigo="${s.code}">Actualizar</button>
+            </div>
+        `;
+        listaSolicitudes.appendChild(tarjeta);
+    });
+
+    document.querySelectorAll(".boton-detalle").forEach(function (boton) {
+        boton.addEventListener("click", function () {
+            const codigo = boton.getAttribute("data-codigo");
+            mostrarDetalle(codigo);
+        });
+    });
+
+    document.querySelectorAll(".boton-cambiar").forEach(function (boton) {
+        boton.addEventListener("click", function () {
+            const codigo = boton.getAttribute("data-codigo");
+            const select = document.getElementById(`select-${codigo}`);
+            cambiarEstado(codigo, select.value);
+        });
+    });
+}
+
+buscador.addEventListener("input", dibujarSolicitudes);
+filtroEstado.addEventListener("change", dibujarSolicitudes);
+
 async function cambiarEstado(codigo, nuevoEstado) {
     if (nuevoEstado === "") {
         alert("Selecciona un estado primero.");
         return;
+    }
+
+    let comentario = null;
+
+    if (nuevoEstado === "rechazada" || nuevoEstado === "cancelada") {
+        const accion = nuevoEstado === "rechazada" ? "rechazo" : "cancelación";
+        comentario = prompt(`Indica el motivo de la ${accion}:`);
+
+        if (comentario === null) {
+            return;
+        }
+
+        if (comentario.trim() === "") {
+            alert(`Debes indicar el motivo de la ${accion}.`);
+            return;
+        }
     }
 
     try {
@@ -129,18 +182,20 @@ async function cambiarEstado(codigo, nuevoEstado) {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`,
             },
-            body: JSON.stringify({ nuevo_estado: nuevoEstado, comentario: null }),
+            body: JSON.stringify({ nuevo_estado: nuevoEstado, comentario: comentario }),
         });
 
         if (respuesta.ok) {
             cargarSolicitudes();
         } else {
-            alert("No se pudo cambiar el estado.");
+            const error = await respuesta.json();
+            alert(error.detail || "No se pudo cambiar el estado.");
         }
     } catch (error) {
         alert("No se pudo conectar con el servidor.");
     }
 }
+
 async function mostrarDetalle(codigo) {
     const contenedor = document.getElementById(`detalle-${codigo}`);
 

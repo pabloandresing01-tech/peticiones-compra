@@ -8,7 +8,7 @@ class Request(Base):
 
     code = Column(String, primary_key=True, index=True)
     type = Column(String, nullable=False)
-    status = Column(String, nullable=False, default="ingresada")
+    status = Column(String, nullable=False, default="en_revision")
     requester_name = Column(String, nullable=False)
     requester_email = Column(String, nullable=False, index=True)
     area = Column(String, nullable=False)

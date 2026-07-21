@@ -229,3 +229,35 @@ button:hover {
     text-decoration: underline;
     cursor: pointer;
 }
+
+.filtros-panel {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.filtros-panel input {
+    flex: 2;
+    min-width: 220px;
+}
+
+.filtros-panel select {
+    flex: 1;
+    min-width: 180px;
+}
+
+.contador-resultados {
+    font-size: 13px;
+    color: #718096;
+    margin-bottom: 12px;
+}
+
+.motivo-rechazo {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #fff5f5;
+    border-left: 3px solid #e53e3e;
+    border-radius: 4px;
+    color: #742a2a;
+}

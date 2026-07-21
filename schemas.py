@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, field_validator, model_validator
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 
@@ -16,6 +16,16 @@ class RequestCreate(BaseModel):
     supplier: Optional[str] = None
     supplier_tax_id: Optional[str] = None
     tech_references: Optional[str] = None
+    
+    @field_validator("due_date")
+    @classmethod
+    def validar_fecha_limite(cls, valor: date) -> date:
+        from datetime import date as fecha_hoy
+        minimo = fecha_hoy.today() + timedelta(days=7)
+        if valor < minimo:
+            raise ValueError("La fecha límite debe ser al menos 7 días desde hoy")
+        return valor
+    
     @field_validator("cost_center")
     @classmethod
     def validar_centro_costo(cls, valor: str) -> str:
@@ -24,10 +34,12 @@ class RequestCreate(BaseModel):
         if len(valor) < 4:
             raise ValueError("El centro de costo debe tener al menos 4 dígitos")
         return valor
+    
     @field_validator("requester_email")
     @classmethod
     def normalizar_email(cls, valor: str) -> str:
         return valor.lower().strip()
+    
     @model_validator(mode="after")
     def validar_campos_por_tipo(self):
         if self.type == "compra":
@@ -40,6 +52,15 @@ class RequestCreate(BaseModel):
                 raise ValueError("El RUT de la empresa es obligatorio para solicitudes de OC")
             if not self.supplier:
                 raise ValueError("El nombre del proveedor es obligatorio para solicitudes de OC")
+
+        dias_minimos = 5 if self.type == "compra" else 3
+        fecha_minima = date.today() + timedelta(days=dias_minimos)
+        if self.due_date < fecha_minima:
+            raise ValueError(
+                f"La fecha límite debe ser al menos {dias_minimos} días desde hoy "
+                f"para solicitudes de {'compra' if self.type == 'compra' else 'OC'}"
+            )
+
         return self
     
 class RequestOut(BaseModel):
@@ -57,6 +78,7 @@ class RequestOut(BaseModel):
     supplier: Optional[str] = None
     supplier_tax_id: Optional[str] = None
     tech_references: Optional[str] = None
+    last_comment: Optional[str] = None
 
     class Config:
         from_attributes = True

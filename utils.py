@@ -17,7 +17,7 @@ import os
 import uuid
 from fastapi import UploadFile
 
-EXTENSIONES_PERMITIDAS = {".pdf", ".xlsx", ".xls", ".docx", ".jpg", ".jpeg", ".png"}
+EXTENSIONES_PERMITIDAS = {".pdf", ".xlsx", ".xls", ".docx", ".jpg", ".jpeg", ".png", ".webp"}
 TAMANO_MAXIMO = 5 * 1024 * 1024  # 5 MB en bytes
 CARPETA_UPLOADS = "uploads"
 
@@ -43,15 +43,13 @@ def guardar_archivo(archivo: UploadFile) -> dict:
     return {"file_url": ruta_completa, "file_name": archivo.filename}
 
 ESTADOS_VALIDOS = {
-    "ingresada",
     "en_revision",
     "en_cotizacion",
-    "aprobada",
-    "oc_emitida",
     "en_transito",
-    "cerrada",
+    "completada",
+    "creada",
     "rechazada",
-    "devuelta",
+    "cancelada",
 }
 
 import httpx
@@ -62,7 +60,7 @@ load_dotenv()
 N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL")
 
 
-def notificar_cambio_estado(codigo: str, nuevo_estado: str, email: str) -> None:
+def notificar_cambio_estado(codigo: str, nuevo_estado: str, email: str, comentario: str = None) -> None:
     if not N8N_WEBHOOK_URL:
         return
 
@@ -70,6 +68,7 @@ def notificar_cambio_estado(codigo: str, nuevo_estado: str, email: str) -> None:
         "codigo": codigo,
         "nuevo_estado": nuevo_estado,
         "email": email,
+        "comentario": comentario or "",
     }
 
     try:

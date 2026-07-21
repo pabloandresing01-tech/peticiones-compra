@@ -16,6 +16,22 @@
             <button id="boton-salir" class="boton-secundario">Cerrar sesión</button>
         </div>
 
+        <div class="filtros-panel">
+            <input type="text" id="buscador" placeholder="Buscar por código o correo...">
+            <select id="filtro-estado">
+                <option value="">Todos los estados</option>
+                <option value="ingresada">Ingresada</option>
+                <option value="en_revision">En revisión</option>
+                <option value="en_cotizacion">En cotización</option>
+                <option value="aprobada">Aprobada</option>
+                <option value="oc_emitida">OC emitida</option>
+                <option value="en_transito">En tránsito</option>
+                <option value="cerrada">Cerrada</option>
+                <option value="rechazada">Rechazada</option>
+                <option value="devuelta">Devuelta</option>
+            </select>
+        </div>
+        
         <div id="lista-solicitudes"></div>
     </div>
 

@@ -17,6 +17,22 @@
             <button id="boton-buscar">Buscar</button>
         </div>
 
+        <div class="filtros-panel" id="filtros-consulta" style="display: none;">
+            <input type="text" id="buscador-codigo" placeholder="Buscar por código...">
+            <select id="filtro-estado-consulta">
+                <option value="">Todos los estados</option>
+                <option value="ingresada">Ingresada</option>
+                <option value="en_revision">En revisión</option>
+                <option value="en_cotizacion">En cotización</option>
+                <option value="aprobada">Aprobada</option>
+                <option value="oc_emitida">OC emitida</option>
+                <option value="en_transito">En tránsito</option>
+                <option value="cerrada">Cerrada</option>
+                <option value="rechazada">Rechazada</option>
+                <option value="devuelta">Devuelta</option>
+            </select>
+        </div>
+
         <div id="resultados"></div>
 
         <p class="enlace-volver"><a href="index.html">← Crear una nueva solicitud</a></p>
