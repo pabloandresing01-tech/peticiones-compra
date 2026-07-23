@@ -42,6 +42,22 @@ def obtener_comprador_actual(
 
     return comprador
 
+def obtener_solicitante_actual(
+    credenciales: HTTPAuthorizationCredentials = Depends(security_scheme),
+    db: Session = Depends(get_db),
+):
+    token = credenciales.credentials
+    email = verificar_token(token)
+
+    if email is None:
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+
+    solicitante = db.query(Requester).filter(Requester.email == email).first()
+    if solicitante is None:
+        raise HTTPException(status_code=401, detail="Solicitante no encontrado")
+
+    return solicitante
+
 @app.get("/")
 def leer_inicio():
     return {"mensaje": "API de peticiones de compra funcionando"}
@@ -339,3 +355,7 @@ def descargar_archivo(
         path=adjunto.file_url,
         filename=adjunto.file_name,
     )
+    
+@app.get("/mi-perfil")
+def ver_mi_perfil(solicitante: Requester = Depends(obtener_solicitante_actual)):
+    return {"nombre": solicitante.name, "email": solicitante.email, "area": solicitante.area}
