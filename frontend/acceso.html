@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificando acceso - Abastecimiento</title>
+    <link rel="stylesheet" href="estilos.css">
+    <style>
+        .contenedor-acceso {
+            max-width: 440px;
+            text-align: center;
+        }
+
+        .estado-verificacion {
+            padding: 20px 0;
+        }
+
+        .icono-estado {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+        }
+
+        .icono-cargando { background-color: #ebf2f9; }
+        .icono-error { background-color: #fff5f5; }
+
+        .estado-verificacion h2 {
+            font-size: 19px;
+            color: #1a3a5c;
+            margin-bottom: 10px;
+        }
+
+        .estado-verificacion p {
+            font-size: 14px;
+            color: #4a5568;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="contenedor contenedor-acceso">
+
+        <div id="verificando" class="estado-verificacion">
+            <div class="icono-estado icono-cargando">🔑</div>
+            <h2>Verificando tu acceso</h2>
+            <p>Un momento por favor...</p>
+        </div>
+
+        <div id="error-acceso" class="estado-verificacion" style="display: none;">
+            <div class="icono-estado icono-error">⚠️</div>
+            <h2>No pudimos validar el enlace</h2>
+            <p id="detalle-error"></p>
+            <button id="boton-reintentar">Pedir un nuevo enlace</button>
+        </div>
+
+    </div>
+
+    <script src="acceso.js"></script>
+</body>
+</html>

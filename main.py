@@ -67,7 +67,6 @@ def leer_inicio():
 def crear_solicitud(
     type: str = Form(...),
     requester_name: str = Form(...),
-    requester_email: str = Form(...),
     area: str = Form(...),
     description: str = Form(...),
     tax_account: str = Form(...),
@@ -78,12 +77,13 @@ def crear_solicitud(
     supplier: Optional[str] = Form(None),
     supplier_tax_id: Optional[str] = Form(None),
     archivos: Optional[list[UploadFile]] = File(None),
+    solicitante: Requester = Depends(obtener_solicitante_actual),
     db: Session = Depends(get_db),
 ):
     datos = RequestCreate(
         type=type,
         requester_name=requester_name,
-        requester_email=requester_email,
+        requester_email=solicitante.email,   # ← del JWT, no del formulario
         area=area,
         description=description,
         tax_account=tax_account,
@@ -155,9 +155,11 @@ def crear_solicitud(
     return {"mensaje": "Solicitud creada correctamente", "codigo": codigo}
 
 @app.get("/solicitudes", response_model=list[RequestOut])
-def consultar_solicitudes(email: str, db: Session = Depends(get_db)):
-    email_normalizado = email.lower().strip()
-    solicitudes = db.query(Request).filter(Request.requester_email == email_normalizado).all()
+def consultar_solicitudes(
+    solicitante: Requester = Depends(obtener_solicitante_actual),
+    db: Session = Depends(get_db),
+):
+    solicitudes = db.query(Request).filter(Request.requester_email == solicitante.email).all()
 
     resultado = []
     for s in solicitudes:

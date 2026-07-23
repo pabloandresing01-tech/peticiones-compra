@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso - Abastecimiento</title>
+    <link rel="stylesheet" href="estilos.css">
+    <style>
+        .contenedor-acceso {
+            max-width: 440px;
+        }
+
+        .cabecera-acceso {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .cabecera-acceso h1 {
+            font-size: 24px;
+            margin-bottom: 6px;
+        }
+
+        .cabecera-acceso .subtitulo {
+            margin-bottom: 0;
+        }
+
+        .pregunta-perfil {
+            font-size: 15px;
+            color: #4a5568;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .opciones-perfil {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tarjeta-perfil {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 18px 20px;
+            border: 1px solid #cbd5e0;
+            border-radius: 10px;
+            background-color: #ffffff;
+            cursor: pointer;
+            text-align: left;
+            transition: border-color 0.15s, background-color 0.15s, transform 0.1s;
+            margin-top: 0;
+            color: #1a2b3c;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 400;
+        }
+
+        .tarjeta-perfil:hover {
+            border-color: #2b6cb0;
+            background-color: #f7fafc;
+            transform: translateY(-1px);
+        }
+
+        .icono-perfil {
+            width: 42px;
+            height: 42px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            background-color: #ebf2f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .texto-perfil strong {
+            display: block;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a3a5c;
+            margin-bottom: 2px;
+        }
+
+        .texto-perfil span {
+            font-size: 13px;
+            color: #718096;
+        }
+
+        .intro-formulario {
+            font-size: 14px;
+            color: #4a5568;
+            margin-bottom: 4px;
+            line-height: 1.5;
+        }
+
+        .campo-opcional {
+            font-weight: 400;
+            color: #a0aec0;
+            font-size: 13px;
+        }
+
+        .campo-completo {
+            display: flex;
+            flex-direction: column;
+            margin-top: 20px;
+        }
+
+        .campo-completo label {
+            margin-top: 0;
+        }
+
+        .fila-doble {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .fila-doble > div {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .fila-doble label {
+            margin-top: 0;
+        }
+
+        .fila-doble > div {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .confirmacion {
+            text-align: center;
+            padding: 12px 0;
+        }
+
+        .icono-confirmacion {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 18px;
+            border-radius: 50%;
+            background-color: #e6fffa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+        }
+
+        .confirmacion h2 {
+            font-size: 19px;
+            color: #1a3a5c;
+            margin-bottom: 10px;
+        }
+
+        .confirmacion p {
+            font-size: 14px;
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        .aviso-vencimiento {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 8px 14px;
+            background-color: #fffaf0;
+            border: 1px solid #f6e05e;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #744210;
+        }
+
+        .enlace-volver {
+            text-align: center;
+        }
+
+        #mensaje-resultado:empty {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="contenedor contenedor-acceso">
+
+        <div class="cabecera-acceso">
+            <h1>Peticiones de Compra</h1>
+            <p class="subtitulo">Área de Abastecimiento · Entrelagos</p>
+        </div>
+
+        <!-- Estado 1: elegir perfil -->
+        <div id="seleccion-perfil">
+            <p class="pregunta-perfil">¿Cómo quieres ingresar?</p>
+            <div class="opciones-perfil">
+                <button type="button" class="tarjeta-perfil" id="boton-solicitante">
+                    <span class="icono-perfil">📝</span>
+                    <span class="texto-perfil">
+                        <strong>Soy solicitante</strong>
+                        <span>Crear y consultar mis solicitudes</span>
+                    </span>
+                </button>
+                <button type="button" class="tarjeta-perfil" id="boton-abastecimiento">
+                    <span class="icono-perfil">📋</span>
+                    <span class="texto-perfil">
+                        <strong>Soy de abastecimiento</strong>
+                        <span>Gestionar solicitudes del equipo</span>
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Estado 2: pedir enlace -->
+        <form id="pedir-enlace" style="display: none;">
+            <p class="intro-formulario">
+                Te enviaremos un enlace de acceso a tu correo. No necesitas contraseña.
+            </p>
+
+            <div class="campo-completo">
+                <label for="email-acceso">Correo electrónico *</label>
+                <input type="email" id="email-acceso" placeholder="tucorreo@entrelagos.cl" required>
+            </div>
+
+            <div class="fila-doble">
+                <div>
+                    <label for="nombre-acceso">Nombre <span class="campo-opcional">(opcional)</span></label>
+                    <input type="text" id="nombre-acceso" placeholder="Tu nombre">
+                </div>
+                <div>
+                    <label for="area-acceso">Área <span class="campo-opcional">(opcional)</span></label>
+                    <input type="text" id="area-acceso" placeholder="Tu área">
+                </div>
+            </div>
+
+            <button type="submit" id="boton-enviar-enlace">Enviar enlace de acceso</button>
+            <p class="enlace-volver"><a href="#" id="volver-perfil">← Volver</a></p>
+        </form>
+
+        <!-- Estado 3: confirmación -->
+        <div id="enlace-enviado" style="display: none;">
+            <div class="confirmacion">
+                <div class="icono-confirmacion">✉️</div>
+                <h2>Revisa tu correo</h2>
+                <p>
+                    Si el correo es válido, recibirás un enlace de acceso.<br>
+                    Haz clic en él para entrar al sistema.
+                </p>
+                <div class="aviso-vencimiento">El enlace vence en 15 minutos</div>
+            </div>
+            <p class="enlace-volver"><a href="#" id="volver-inicio">← Usar otro correo</a></p>
+        </div>
+
+        <div id="mensaje-resultado"></div>
+    </div>
+
+    <script src="entrada.js"></script>
+</body>
+</html>
