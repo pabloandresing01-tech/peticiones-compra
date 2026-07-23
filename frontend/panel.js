@@ -14,6 +14,8 @@ const filtroEstado = document.getElementById("filtro-estado");
 
 let todasLasSolicitudes = [];
 
+const ESTADOS_CERRADOS = ["completada", "creada", "rechazada", "cancelada"];
+
 const nombresEstado = {
     en_revision: "En revisión",
     en_cotizacion: "En cotización",
@@ -75,9 +77,8 @@ function dibujarSolicitudes() {
             s.code.toLowerCase().includes(texto) ||
             s.requester_email.toLowerCase().includes(texto);
 
-        const estadosFinales = ["completada", "creada", "rechazada", "cancelada"];
         const coincideEstado =
-            estado === "" ? !estadosFinales.includes(s.status) : s.status === estado;
+            estado === "" ? !ESTADOS_CERRADOS.includes(s.status) : s.status === estado;
 
         return coincideTexto && coincideEstado;
     });
@@ -217,6 +218,7 @@ async function mostrarDetalle(codigo) {
         }
 
         const d = await respuesta.json();
+        const cerrada = ESTADOS_CERRADOS.includes(d.status);
 
         let html = "<div class='detalle-bloque'>";
         html += `<div class="detalle-item"><strong>Cuenta contable:</strong> ${d.tax_account}</div>`;
@@ -240,8 +242,38 @@ async function mostrarDetalle(codigo) {
             html += "<div class='detalle-item'>Sin archivos adjuntos</div>";
         } else {
             d.attachments.forEach(function (a) {
-                html += `<div class="detalle-item"><a href="#" class="enlace-archivo" data-id="${a.id}" data-nombre="${a.file_name}">${a.file_name}</a></div>`;
+                const botonEliminar = cerrada
+                    ? ""
+                    : `<button class="boton-eliminar-archivo" data-id="${a.id}" title="Eliminar archivo">&times;</button>`;
+                html += `<div class="detalle-item"><a href="#" class="enlace-archivo" data-id="${a.id}" data-nombre="${a.file_name}">${a.file_name}</a> ${botonEliminar}</div>`;
             });
+        }
+
+        if (d.type === "oc") {
+            const ocCargada = d.attachments.find(function (a) {
+                return a.origin === "purchase_order";
+            });
+
+            html += "<div class='detalle-item'><strong>Orden de compra (PDF):</strong></div>";
+            if (ocCargada) {
+                html += `<div class="detalle-item">Cargada: ${ocCargada.file_name}</div>`;
+            }
+
+            if (cerrada) {
+                if (!ocCargada) {
+                    html += "<div class='detalle-item'>Sin orden de compra cargada</div>";
+                }
+            } else {
+                html += `
+                    <div class="detalle-item">
+                        <input type="file" id="pdf-oc-${codigo}" accept=".pdf">
+                        <button class="boton-subir-oc" data-codigo="${codigo}">
+                            ${ocCargada ? "Reemplazar PDF" : "Subir PDF"}
+                        </button>
+                        <span id="estado-subida-${codigo}"></span>
+                    </div>
+                `;
+            }
         }
 
         html += "<div class='detalle-item'><strong>Historial:</strong></div>";
@@ -256,6 +288,19 @@ async function mostrarDetalle(codigo) {
         html += "</div>";
         contenedor.innerHTML = html;
 
+        const botonSubir = contenedor.querySelector(".boton-subir-oc");
+        if (botonSubir) {
+            botonSubir.addEventListener("click", function () {
+                subirOrdenCompra(botonSubir.getAttribute("data-codigo"));
+            });
+        }
+
+        contenedor.querySelectorAll(".boton-eliminar-archivo").forEach(function (boton) {
+            boton.addEventListener("click", function () {
+                eliminarArchivo(boton.getAttribute("data-id"), codigo);
+            });
+        });
+
         contenedor.querySelectorAll(".enlace-archivo").forEach(function (enlace) {
             enlace.addEventListener("click", function (e) {
                 e.preventDefault();
@@ -265,6 +310,67 @@ async function mostrarDetalle(codigo) {
 
     } catch (error) {
         contenedor.innerHTML = "<p>No se pudo conectar con el servidor.</p>";
+    }
+}
+
+async function eliminarArchivo(id, codigo) {
+    if (!confirm("¿Eliminar este archivo? Quedará registro de la eliminación.")) {
+        return;
+    }
+
+    try {
+        const respuesta = await fetch(`${API_URL}/panel/archivos/${id}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` },
+        });
+
+        if (respuesta.ok) {
+            const contenedor = document.getElementById(`detalle-${codigo}`);
+            contenedor.innerHTML = "";
+            mostrarDetalle(codigo);
+        } else {
+            const error = await respuesta.json();
+            alert(error.detail || "No se pudo eliminar el archivo.");
+        }
+    } catch (error) {
+        alert("No se pudo conectar con el servidor.");
+    }
+}
+
+async function subirOrdenCompra(codigo) {
+    const input = document.getElementById(`pdf-oc-${codigo}`);
+    const aviso = document.getElementById(`estado-subida-${codigo}`);
+
+    if (input.files.length === 0) {
+        alert("Selecciona un archivo PDF primero.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("archivo", input.files[0]);
+
+    aviso.textContent = "Subiendo...";
+
+    try {
+        const respuesta = await fetch(`${API_URL}/panel/solicitudes/${codigo}/orden-compra`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` },
+            body: formData,
+        });
+
+        if (respuesta.ok) {
+            aviso.textContent = "";
+            const contenedor = document.getElementById(`detalle-${codigo}`);
+            contenedor.innerHTML = "";
+            mostrarDetalle(codigo);
+        } else {
+            const error = await respuesta.json();
+            aviso.textContent = "";
+            alert(error.detail || "No se pudo subir la orden de compra.");
+        }
+    } catch (error) {
+        aviso.textContent = "";
+        alert("No se pudo conectar con el servidor.");
     }
 }
 

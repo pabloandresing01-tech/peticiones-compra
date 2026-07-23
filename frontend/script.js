@@ -137,9 +137,19 @@ formulario.addEventListener("submit", async function (evento) {
                 "✅ Solicitud creada correctamente. Tu código es: " + resultado.codigo;
             formulario.reset();
         } else {
+            let detalle = "Hubo un error al enviar la solicitud. Revisa los datos.";
+            try {
+                const error = await respuesta.json();
+                if (typeof error.detail === "string") {
+                    detalle = error.detail;
+                } else if (Array.isArray(error.detail) && error.detail.length > 0) {
+                    detalle = error.detail[0].msg.replace("Value error, ", "");
+                }
+            } catch (e) {
+                // si la respuesta no es JSON, queda el mensaje genérico
+            }
             mensajeResultado.style.color = "#c53030";
-            mensajeResultado.textContent =
-                "❌ Hubo un error al enviar la solicitud. Revisa los datos.";
+            mensajeResultado.textContent = "❌ " + detalle;
         }
     } catch (error) {
         mensajeResultado.style.color = "#c53030";

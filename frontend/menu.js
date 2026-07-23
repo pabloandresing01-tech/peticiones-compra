@@ -98,7 +98,7 @@ async function cargarResumen() {
             return;
         }
 
-        const recientes = solicitudes.slice(-3).reverse();
+        const recientes = solicitudes.slice(0, 3);
         resumenSolicitudes.innerHTML = "";
 
         recientes.forEach(function (s) {

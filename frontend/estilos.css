@@ -265,3 +265,17 @@ button:hover {
 .estado-completada { background-color: #2f855a; }
 .estado-creada { background-color: #2f855a; }
 .estado-cancelada { background-color: #718096; }
+
+.boton-eliminar-archivo {
+    background: none;
+    border: none;
+    color: #c53030;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.boton-eliminar-archivo:hover {
+    color: #9b2c2c;
+}

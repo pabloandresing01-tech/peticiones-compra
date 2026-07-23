@@ -38,6 +38,10 @@
 
             <label for="description">Descripción *</label>
             <textarea id="description" name="description" rows="3" required></textarea>
+            <p class="ayuda-campo">
+                Si la solicitud involucra más de un centro de costo, detállalo aquí
+                indicando qué corresponde a cada uno.
+            </p>
 
             <div class="grupo-compra">
                 <label for="quantity">Cantidad</label>
@@ -63,6 +67,13 @@
                 <input type="text" id="supplier_tax_id" name="supplier_tax_id">
             </div>
 
+            <div class="grupo-oc">
+                <p class="aviso-proveedor">
+                    El proveedor debe estar creado previamente en el sistema.
+                    Si no lo está, la Orden de Compra será rechazada indicando ese motivo.
+                </p>
+            </div>
+            
             <div class="grupo-oc">
                 <label for="archivos-oc">Cotización *</label>
                 <input type="file" id="archivos-oc" multiple>
