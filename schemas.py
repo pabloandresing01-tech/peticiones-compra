@@ -17,15 +17,6 @@ class RequestCreate(BaseModel):
     supplier_tax_id: Optional[str] = None
     tech_references: Optional[str] = None
     
-    @field_validator("due_date")
-    @classmethod
-    def validar_fecha_limite(cls, valor: date) -> date:
-        from datetime import date as fecha_hoy
-        minimo = fecha_hoy.today() + timedelta(days=7)
-        if valor < minimo:
-            raise ValueError("La fecha límite debe ser al menos 7 días desde hoy")
-        return valor
-    
     @field_validator("cost_center")
     @classmethod
     def validar_centro_costo(cls, valor: str) -> str:
@@ -111,6 +102,9 @@ class CambioEstado(BaseModel):
 class AttachmentOut(BaseModel):
     id: int
     file_name: str
+    origin: str
+    deleted_at: Optional[datetime] = None
+    deleted_by: Optional[str] = None
 
     class Config:
         from_attributes = True

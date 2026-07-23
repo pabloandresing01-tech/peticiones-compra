@@ -52,6 +52,9 @@ class Attachment(Base):
     request_code = Column(String, ForeignKey("requests.code"), nullable=False)
     file_url = Column(String, nullable=False)
     file_name = Column(String, nullable=False)
+    origin = Column(String(20), nullable=False, server_default="requester")
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
 class Requester(Base):
