@@ -6,10 +6,10 @@ from sqlalchemy.orm import Session
 import os 
 
 from database import get_db
-from models import Request, StatusHistory, Attachment, Buyer
-from schemas import RequestCreate, RequestOut, LoginRequest, TokenResponse, CambioEstado, RequestDetail, AttachmentOut, StatusHistoryOut
+from models import Request, StatusHistory, Attachment, Buyer, Requester, MagicLink
+from schemas import RequestCreate, RequestOut, LoginRequest, TokenResponse, CambioEstado, RequestDetail, AttachmentOut, StatusHistoryOut, SolicitarEnlace, CanjearEnlace
 from utils import generar_codigo, validar_archivo, guardar_archivo, ESTADOS_VALIDOS, notificar_cambio_estado
-from security import verificar_password, crear_token, verificar_token
+from security import verificar_password, crear_token, verificar_token, generar_magic_token, esta_expirado
 from typing import Optional
 from datetime import date
 
@@ -171,6 +171,61 @@ def login(datos: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
 
     token = crear_token({"sub": comprador.email})
+
+    return {"access_token": token, "token_type": "bearer"}
+
+@app.post("/solicitar-enlace")
+def solicitar_enlace(datos: SolicitarEnlace, db: Session = Depends(get_db)):
+    email = datos.email  # ya viene normalizado por el schema
+
+    # 1. Buscar o crear al solicitante
+    solicitante = db.query(Requester).filter(Requester.email == email).first()
+    if solicitante is None:
+        solicitante = Requester(email=email, name=datos.name, area=datos.area)
+        db.add(solicitante)
+    else:
+        # Actualizar nombre/área si llegaron datos nuevos
+        if datos.name:
+            solicitante.name = datos.name
+        if datos.area:
+            solicitante.area = datos.area
+
+    # 2. Generar el token
+    token, expiracion = generar_magic_token()
+
+    # 3. Guardar la fila en magic_links
+    nuevo_enlace = MagicLink(email=email, token=token, expires_at=expiracion)
+    db.add(nuevo_enlace)
+
+    db.commit()
+
+    # 4. Enviar el correo (por ahora, imprimir en consola para desarrollo)
+    enlace = f"http://localhost:5500/acceso.html?token={token}"
+    print(f"\n[MAGIC LINK] Enlace para {email}:\n{enlace}\n")
+    # notificar_magic_link(email, enlace)  # se activará con n8n
+
+    # 5. Respuesta neutra, sin el token
+    return {"mensaje": "Si el correo es válido, recibirás un enlace de acceso."}
+
+@app.post("/canjear-enlace", response_model=TokenResponse)
+def canjear_enlace(datos: CanjearEnlace, db: Session = Depends(get_db)):
+    # Buscar el token en la base
+    registro = db.query(MagicLink).filter(MagicLink.token == datos.token).first()
+
+    # Las tres preguntas, en orden
+    if registro is None:
+        raise HTTPException(status_code=401, detail="Enlace inválido.")
+    if registro.used:
+        raise HTTPException(status_code=401, detail="Este enlace ya fue utilizado.")
+    if esta_expirado(registro.expires_at):
+        raise HTTPException(status_code=401, detail="El enlace expiró. Solicita uno nuevo.")
+
+    # Consumir el token: un solo uso
+    registro.used = True
+    db.commit()
+
+    # Emitir el JWT de sesión (mismo mecanismo que los compradores)
+    token = crear_token({"sub": registro.email})
 
     return {"access_token": token, "token_type": "bearer"}
 
