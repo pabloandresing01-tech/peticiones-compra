@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio - Abastecimiento</title>
+    <link rel="stylesheet" href="estilos.css">
+    <style>
+        .contenedor-menu {
+            max-width: 520px;
+        }
+
+        .saludo {
+            font-size: 15px;
+            color: #4a5568;
+            margin-bottom: 4px;
+        }
+
+        .correo-sesion {
+            font-size: 13px;
+            color: #718096;
+            margin-bottom: 28px;
+        }
+
+        .opciones-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .tarjeta-accion {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 18px 20px;
+            border: 1px solid #cbd5e0;
+            border-radius: 10px;
+            background-color: #ffffff;
+            cursor: pointer;
+            text-align: left;
+            transition: border-color 0.15s, background-color 0.15s, transform 0.1s;
+            margin-top: 0;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 400;
+            color: #1a2b3c;
+        }
+
+        .tarjeta-accion:hover {
+            border-color: #2b6cb0;
+            background-color: #f7fafc;
+            transform: translateY(-1px);
+        }
+
+        .icono-accion {
+            width: 42px;
+            height: 42px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            background-color: #ebf2f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .texto-accion strong {
+            display: block;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a3a5c;
+            margin-bottom: 2px;
+        }
+
+        .texto-accion span {
+            font-size: 13px;
+            color: #718096;
+        }
+
+        .bloque-resumen {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 24px;
+        }
+
+        .titulo-resumen {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a3a5c;
+            margin-bottom: 14px;
+        }
+
+        .fila-resumen {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background-color: #fafbfc;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 8px;
+        }
+
+        .codigo-resumen {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a3a5c;
+        }
+
+        .descripcion-resumen {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 2px;
+        }
+
+        .info-resumen {
+            min-width: 0;
+            flex: 1;
+            padding-right: 12px;
+        }
+
+        .info-resumen .descripcion-resumen {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sin-solicitudes {
+            font-size: 14px;
+            color: #718096;
+            text-align: center;
+            padding: 16px 0;
+        }
+
+        .estado .estado-menu {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="contenedor contenedor-menu">
+
+        <div class="cabecera-panel">
+            <div>
+                <h1>Peticiones de Compra</h1>
+                <p class="subtitulo">Área de Abastecimiento · Entrelagos</p>
+            </div>
+            <button id="boton-salir" class="boton-secundario">Cerrar sesión</button>
+        </div>
+
+        <p class="saludo" id="saludo-usuario">Hola</p>
+        <p class="correo-sesion" id="correo-sesion"></p>
+
+        <div class="opciones-menu">
+            <button type="button" class="tarjeta-accion" id="accion-crear">
+                <span class="icono-accion">📝</span>
+                <span class="texto-accion">
+                    <strong>Nueva solicitud</strong>
+                    <span>Crear una solicitud de compra u OC</span>
+                </span>
+            </button>
+            <button type="button" class="tarjeta-accion" id="accion-consultar">
+                <span class="icono-accion">🔍</span>
+                <span class="texto-accion">
+                    <strong>Mis solicitudes</strong>
+                    <span id="subtitulo-consultar">Ver el estado de mis solicitudes</span>
+                </span>
+            </button>
+        </div>
+
+        <div class="bloque-resumen">
+            <p class="titulo-resumen">Actividad reciente</p>
+            <div id="resumen-solicitudes">
+                <p class="sin-solicitudes">Cargando...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="menu.js"></script>
+</body>
+</html>

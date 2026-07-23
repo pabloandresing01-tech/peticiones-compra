@@ -3,39 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consultar Solicitudes - Abastecimiento</title>
+    <title>Mis Solicitudes - Abastecimiento</title>
     <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
     <div class="contenedor">
-        <h1>Consultar Solicitudes</h1>
-        <p class="subtitulo">Ingresa tu correo para ver el estado de tus solicitudes</p>
 
-        <div class="busqueda">
-            <label for="email-consulta">Correo electrónico</label>
-            <input type="email" id="email-consulta" placeholder="tucorreo@entrelagos.cl">
-            <button id="boton-buscar">Buscar</button>
+        <div class="cabecera-panel">
+            <div>
+                <h1>Mis Solicitudes</h1>
+                <p class="subtitulo">Área de Abastecimiento - Entrelagos</p>
+            </div>
+            <button id="boton-salir" class="boton-secundario">Cerrar sesión</button>
         </div>
 
-        <div class="filtros-panel" id="filtros-consulta" style="display: none;">
+        <p class="tarjeta-fila" id="sesion-activa"></p>
+
+        <div class="filtros-panel" id="filtros-consulta">
             <input type="text" id="buscador-codigo" placeholder="Buscar por código...">
             <select id="filtro-estado-consulta">
-                <option value="">Todos los estados</option>
-                <option value="ingresada">Ingresada</option>
+                <option value="activas">Activas</option>
+                <option value="cerradas">Cerradas</option>
+                <option value="">Todas</option>
                 <option value="en_revision">En revisión</option>
                 <option value="en_cotizacion">En cotización</option>
-                <option value="aprobada">Aprobada</option>
-                <option value="oc_emitida">OC emitida</option>
                 <option value="en_transito">En tránsito</option>
-                <option value="cerrada">Cerrada</option>
+                <option value="completada">Completada</option>
+                <option value="creada">Creada</option>
                 <option value="rechazada">Rechazada</option>
-                <option value="devuelta">Devuelta</option>
+                <option value="cancelada">Cancelada</option>
             </select>
         </div>
 
         <div id="resultados"></div>
 
-        <p class="enlace-volver"><a href="index.html">← Crear una nueva solicitud</a></p>
+        <p class="enlace-volver"><a href="menu.html">← Volver al inicio</a></p>
+
     </div>
 
     <script src="consultar.js"></script>

@@ -34,7 +34,7 @@ async function canjearToken() {
         if (respuesta.ok) {
             const datos = await respuesta.json();
             localStorage.setItem("token_solicitante", datos.access_token);
-            window.location.href = "index.html";
+            window.location.href = "menu.html";
         } else {
             const error = await respuesta.json();
             mostrarError(error.detail || "El enlace no es válido.");

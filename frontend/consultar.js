@@ -1,11 +1,15 @@
 const API_URL = "http://127.0.0.1:8000";
 
-const botonBuscar = document.getElementById("boton-buscar");
-const inputEmail = document.getElementById("email-consulta");
+const token = localStorage.getItem("token_solicitante");
+if (!token) {
+    window.location.href = "entrada.html";
+}
+
 const resultados = document.getElementById("resultados");
-const filtrosConsulta = document.getElementById("filtros-consulta");
 const buscadorCodigo = document.getElementById("buscador-codigo");
 const filtroEstadoConsulta = document.getElementById("filtro-estado-consulta");
+const botonSalir = document.getElementById("boton-salir");
+const sesionActiva = document.getElementById("sesion-activa");
 
 let misSolicitudes = [];
 
@@ -19,48 +23,90 @@ const nombresEstado = {
     cancelada: "Cancelada",
 };
 
-botonBuscar.addEventListener("click", async function () {
-    const email = inputEmail.value.trim();
+botonSalir.addEventListener("click", function () {
+    localStorage.removeItem("token_solicitante");
+    window.location.href = "entrada.html";
+});
 
-    if (email === "") {
-        resultados.innerHTML = "<p style='color:#c53030;'>Por favor ingresa un correo.</p>";
-        filtrosConsulta.style.display = "none";
-        return;
-    }
+function sesionExpirada() {
+    localStorage.removeItem("token_solicitante");
+    window.location.href = "entrada.html";
+}
 
-    resultados.innerHTML = "<p>Buscando...</p>";
-    filtrosConsulta.style.display = "none";
-
+async function cargarPerfil() {
     try {
-        const respuesta = await fetch(`${API_URL}/solicitudes?email=${email}`);
-        misSolicitudes = await respuesta.json();
+        const respuesta = await fetch(`${API_URL}/mi-perfil`, {
+            headers: { "Authorization": `Bearer ${token}` },
+        });
 
-        if (misSolicitudes.length === 0) {
-            resultados.innerHTML = "<p>No se encontraron solicitudes para ese correo.</p>";
+        if (respuesta.status === 401 || respuesta.status === 403) {
+            sesionExpirada();
             return;
         }
 
-        buscadorCodigo.value = "";
-        filtroEstadoConsulta.value = "";
-        filtrosConsulta.style.display = "flex";
+        if (respuesta.ok) {
+            const perfil = await respuesta.json();
+            sesionActiva.textContent = `Sesión: ${perfil.email}`;
+        }
+    } catch (error) {
+        sesionActiva.textContent = "";
+    }
+}
+
+async function cargarSolicitudes() {
+    resultados.innerHTML = "<p>Cargando...</p>";
+
+    try {
+        const respuesta = await fetch(`${API_URL}/solicitudes`, {
+            headers: { "Authorization": `Bearer ${token}` },
+        });
+
+        if (respuesta.status === 401 || respuesta.status === 403) {
+            sesionExpirada();
+            return;
+        }
+
+        if (!respuesta.ok) {
+            resultados.innerHTML = "<p style='color:#c53030;'>No se pudieron cargar tus solicitudes.</p>";
+            return;
+        }
+
+        misSolicitudes = await respuesta.json();
+
+        if (misSolicitudes.length === 0) {
+            resultados.innerHTML = "<p>Todavía no tienes solicitudes registradas.</p>";
+            return;
+        }
+
         dibujarMisSolicitudes();
 
     } catch (error) {
         resultados.innerHTML = "<p style='color:#c53030;'>No se pudo conectar con el servidor.</p>";
     }
-});
+}
 
 function dibujarMisSolicitudes() {
     const texto = buscadorCodigo.value.trim().toLowerCase();
     const estado = filtroEstadoConsulta.value;
 
-    const estadosFinales = ["completada", "creada"];
+    const estadosCerrados = ["completada", "creada", "rechazada", "cancelada"];
 
     const filtradas = misSolicitudes.filter(function (s) {
-        const coincideTexto = texto === "" || s.code.toLowerCase().includes(texto);
-        const coincideEstado =
-            estado === "" ? !estadosFinales.includes(s.status) : s.status === estado;
-        return coincideTexto && coincideEstado;
+        // Si hay búsqueda por código, ignora el filtro de estado
+        if (texto !== "") {
+            return s.code.toLowerCase().includes(texto);
+        }
+
+        if (estado === "activas") {
+            return !estadosCerrados.includes(s.status);
+        }
+        if (estado === "cerradas") {
+            return estadosCerrados.includes(s.status);
+        }
+        if (estado === "") {
+            return true;
+        }
+        return s.status === estado;
     });
 
     if (filtradas.length === 0) {
@@ -95,3 +141,6 @@ function dibujarMisSolicitudes() {
 
 buscadorCodigo.addEventListener("input", dibujarMisSolicitudes);
 filtroEstadoConsulta.addEventListener("change", dibujarMisSolicitudes);
+
+cargarPerfil();
+cargarSolicitudes();

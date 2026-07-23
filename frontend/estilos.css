@@ -261,3 +261,7 @@ button:hover {
     border-radius: 4px;
     color: #742a2a;
 }
+
+.estado-completada { background-color: #2f855a; }
+.estado-creada { background-color: #2f855a; }
+.estado-cancelada { background-color: #718096; }

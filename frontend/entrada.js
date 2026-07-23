@@ -12,7 +12,7 @@ const volverInicio = document.getElementById("volver-inicio");
 
 // Si ya hay sesión activa, saltar directo al formulario
 if (localStorage.getItem("token_solicitante")) {
-    window.location.href = "index.html";
+    window.location.href = "menu.html";
 }
 
 botonAbastecimiento.addEventListener("click", function () {
