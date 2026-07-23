@@ -1,5 +1,47 @@
 const API_URL = "http://127.0.0.1:8000";
 
+const token = localStorage.getItem("token_solicitante");
+if (!token) {
+    window.location.href = "entrada.html";
+}
+
+const botonSalir = document.getElementById("boton-salir");
+const sesionActiva = document.getElementById("sesion-activa");
+
+botonSalir.addEventListener("click", function () {
+    localStorage.removeItem("token_solicitante");
+    window.location.href = "entrada.html";
+});
+
+async function cargarPerfil() {
+    try {
+        const respuesta = await fetch(`${API_URL}/mi-perfil`, {
+            headers: { "Authorization": `Bearer ${token}` },
+        });
+
+        if (respuesta.status === 401) {
+            localStorage.removeItem("token_solicitante");
+            window.location.href = "entrada.html";
+            return;
+        }
+
+        if (respuesta.ok) {
+            const perfil = await respuesta.json();
+            sesionActiva.textContent = `Sesión: ${perfil.email}`;
+            if (perfil.nombre) {
+                document.getElementById("requester_name").value = perfil.nombre;
+            }
+            if (perfil.area) {
+                document.getElementById("area").value = perfil.area;
+            }
+        }
+    } catch (error) {
+        sesionActiva.textContent = "";
+    }
+}
+
+cargarPerfil();
+
 const selectTipo = document.getElementById("type");
 const gruposCompra = document.querySelectorAll(".grupo-compra");
 const gruposOC = document.querySelectorAll(".grupo-oc");
@@ -51,7 +93,6 @@ formulario.addEventListener("submit", async function (evento) {
     const formData = new FormData();
     formData.append("type", tipo);
     formData.append("requester_name", document.getElementById("requester_name").value);
-    formData.append("requester_email", document.getElementById("requester_email").value);
     formData.append("area", document.getElementById("area").value);
     formData.append("description", document.getElementById("description").value);
     formData.append("tax_account", document.getElementById("tax_account").value);
@@ -79,8 +120,15 @@ formulario.addEventListener("submit", async function (evento) {
     try {
         const respuesta = await fetch(`${API_URL}/solicitudes`, {
             method: "POST",
+            headers: { "Authorization": `Bearer ${token}` },
             body: formData,
         });
+
+        if (respuesta.status === 401) {
+            localStorage.removeItem("token_solicitante");
+            window.location.href = "entrada.html";
+            return;
+        }
 
         if (respuesta.ok) {
             const resultado = await respuesta.json();
