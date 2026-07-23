@@ -75,3 +75,48 @@ def notificar_cambio_estado(codigo: str, nuevo_estado: str, email: str, comentar
         httpx.post(N8N_WEBHOOK_URL, json=datos, timeout=5.0)
     except Exception:
         pass
+    
+N8N_MAGIC_LINK_URL = os.getenv("N8N_MAGIC_LINK_URL")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5500")
+
+
+def notificar_magic_link(email: str, enlace: str) -> None:
+    if not N8N_MAGIC_LINK_URL:
+        return
+
+    datos = {
+        "email": email,
+        "enlace": enlace,
+    }
+
+    try:
+        httpx.post(N8N_MAGIC_LINK_URL, json=datos, timeout=5.0)
+    except Exception:
+        pass
+    
+import base64
+
+N8N_OC_URL = os.getenv("N8N_OC_URL")
+
+
+def notificar_oc_creada(codigo: str, email: str, ruta_pdf: str, nombre_pdf: str) -> None:
+    if not N8N_OC_URL:
+        return
+
+    try:
+        with open(ruta_pdf, "rb") as f:
+            contenido = base64.b64encode(f.read()).decode("utf-8")
+    except Exception:
+        return
+
+    datos = {
+        "codigo": codigo,
+        "email": email,
+        "nombre_pdf": nombre_pdf,
+        "pdf_base64": contenido,
+    }
+
+    try:
+        httpx.post(N8N_OC_URL, json=datos, timeout=30.0)
+    except Exception:
+        pass
