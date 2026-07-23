@@ -86,6 +86,19 @@ class RequestOut(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    
+class SolicitarEnlace(BaseModel):
+    email: EmailStr
+    name: Optional[str] = None
+    area: Optional[str] = None
+
+    @field_validator("email")
+    @classmethod
+    def normalizar_email(cls, valor: str) -> str:
+        return valor.lower().strip()
+    
+class CanjearEnlace(BaseModel):
+    token: str
 
 class TokenResponse(BaseModel):
     access_token: str
