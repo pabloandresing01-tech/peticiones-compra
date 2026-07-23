@@ -1,5 +1,6 @@
 import os
-from datetime import datetime, timedelta
+import secrets
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from passlib.context import CryptContext
 from jose import jwt, JWTError
@@ -8,7 +9,8 @@ load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
-DURACION_TOKEN_MINUTOS = 480
+DURACION_TOKEN_MINUTOS = 480          # sesión JWT: 8 horas
+MAGIC_LINK_EXPIRACION_MINUTOS = 15    # enlace de un solo uso: 15 minutos
 
 contexto_password = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -23,7 +25,7 @@ def verificar_password(password_plano: str, password_hash: str) -> bool:
 
 def crear_token(datos: dict) -> str:
     info = datos.copy()
-    expiracion = datetime.utcnow() + timedelta(minutes=DURACION_TOKEN_MINUTOS)
+    expiracion = datetime.now(timezone.utc) + timedelta(minutes=DURACION_TOKEN_MINUTOS)
     info.update({"exp": expiracion})
     token = jwt.encode(info, SECRET_KEY, algorithm=ALGORITHM)
     return token
@@ -37,3 +39,11 @@ def verificar_token(token: str) -> str:
         return email
     except JWTError:
         return None
+    
+def generar_magic_token() -> tuple[str, datetime]:
+    token = secrets.token_urlsafe(32)
+    expiracion = datetime.now(timezone.utc) + timedelta(minutes=MAGIC_LINK_EXPIRACION_MINUTOS)
+    return token, expiracion
+
+def esta_expirado(expira_en: datetime) -> bool:
+    return expira_en < datetime.now(timezone.utc)
