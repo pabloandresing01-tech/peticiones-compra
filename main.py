@@ -3,15 +3,20 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func as sa_func
+from pydantic import ValidationError
 import os 
 
 from database import get_db
 from models import Request, StatusHistory, Attachment, Buyer, Requester, MagicLink
 from schemas import RequestCreate, RequestOut, LoginRequest, TokenResponse, CambioEstado, RequestDetail, AttachmentOut, StatusHistoryOut, SolicitarEnlace, CanjearEnlace
-from utils import generar_codigo, validar_archivo, guardar_archivo, ESTADOS_VALIDOS, notificar_cambio_estado
+from utils import generar_codigo, validar_archivo, guardar_archivo, ESTADOS_VALIDOS, notificar_cambio_estado, notificar_magic_link, notificar_oc_creada, FRONTEND_URL
 from security import verificar_password, crear_token, verificar_token, generar_magic_token, esta_expirado
 from typing import Optional
-from datetime import date
+from datetime import date, datetime, timezone
+
+
+ESTADOS_CERRADOS = {"completada", "creada", "rechazada", "cancelada"}
 
 
 app = FastAPI()
@@ -80,20 +85,25 @@ def crear_solicitud(
     solicitante: Requester = Depends(obtener_solicitante_actual),
     db: Session = Depends(get_db),
 ):
-    datos = RequestCreate(
-        type=type,
-        requester_name=requester_name,
-        requester_email=solicitante.email,   # ← del JWT, no del formulario
-        area=area,
-        description=description,
-        tax_account=tax_account,
-        cost_center=cost_center,
-        due_date=due_date,
-        quantity=quantity,
-        tech_references=tech_references,
-        supplier=supplier,
-        supplier_tax_id=supplier_tax_id,
-    )
+    try:
+        datos = RequestCreate(
+            type=type,
+            requester_name=requester_name,
+            requester_email=solicitante.email,   # ← del JWT, no del formulario
+            area=area,
+            description=description,
+            tax_account=tax_account,
+            cost_center=cost_center,
+            due_date=due_date,
+            quantity=quantity,
+            tech_references=tech_references,
+            supplier=supplier,
+            supplier_tax_id=supplier_tax_id,
+        )
+    except ValidationError as e:
+        primer_error = e.errors()[0]
+        mensaje = primer_error["msg"].replace("Value error, ", "")
+        raise HTTPException(status_code=400, detail=mensaje)
 
     if archivos is None:
         archivos = []
@@ -159,7 +169,12 @@ def consultar_solicitudes(
     solicitante: Requester = Depends(obtener_solicitante_actual),
     db: Session = Depends(get_db),
 ):
-    solicitudes = db.query(Request).filter(Request.requester_email == solicitante.email).all()
+    solicitudes = (
+        db.query(Request)
+        .filter(Request.requester_email == solicitante.email)
+        .order_by(sa_func.coalesce(Request.updated_at, Request.created_at).desc())
+        .all()
+    )
 
     resultado = []
     for s in solicitudes:
@@ -217,10 +232,9 @@ def solicitar_enlace(datos: SolicitarEnlace, db: Session = Depends(get_db)):
 
     db.commit()
 
-    # 4. Enviar el correo (por ahora, imprimir en consola para desarrollo)
-    enlace = f"http://localhost:5500/acceso.html?token={token}"
-    print(f"\n[MAGIC LINK] Enlace para {email}:\n{enlace}\n")
-    # notificar_magic_link(email, enlace)  # se activará con n8n
+    # 4. Enviar el correo con el enlace
+    enlace = f"{FRONTEND_URL}/acceso.html?token={token}"
+    notificar_magic_link(email, enlace)
 
     # 5. Respuesta neutra, sin el token
     return {"mensaje": "Si el correo es válido, recibirás un enlace de acceso."}
@@ -283,16 +297,34 @@ def cambiar_estado(
 ):
     if datos.nuevo_estado not in ESTADOS_VALIDOS:
         raise HTTPException(status_code=400, detail="Estado no válido")
-    
+
     if datos.nuevo_estado in {"rechazada", "cancelada"} and not datos.comentario:
         raise HTTPException(
             status_code=400,
             detail="Debes indicar el motivo cuando rechazas o cancelas una solicitud",
         )
-        
+
     solicitud = db.query(Request).filter(Request.code == codigo).first()
     if solicitud is None:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+    ruta_oc = None
+    nombre_oc = None
+
+    # Exige el PDF de la OC antes de marcarla como creada
+    if datos.nuevo_estado == "creada":
+        oc_adjunta = db.query(Attachment).filter(
+            Attachment.request_code == codigo,
+            Attachment.origin == "purchase_order",
+            Attachment.deleted_at.is_(None),
+        ).first()
+        if oc_adjunta is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Debes adjuntar el PDF de la orden de compra antes de marcarla como creada",
+            )
+        ruta_oc = oc_adjunta.file_url
+        nombre_oc = oc_adjunta.file_name
 
     estado_anterior = solicitud.status
     solicitud.status = datos.nuevo_estado
@@ -309,9 +341,14 @@ def cambiar_estado(
     )
     db.add(registro)
 
+    email_solicitante = solicitud.requester_email
+
     db.commit()
 
-    notificar_cambio_estado(codigo, datos.nuevo_estado, solicitud.requester_email, datos.comentario)
+    if ruta_oc is not None:
+        notificar_oc_creada(codigo, email_solicitante, ruta_oc, nombre_oc)
+    else:
+        notificar_cambio_estado(codigo, datos.nuevo_estado, email_solicitante, datos.comentario)
 
     return {"mensaje": "Estado actualizado", "codigo": codigo, "nuevo_estado": datos.nuevo_estado}
 
@@ -325,7 +362,10 @@ def detalle_solicitud(
     if solicitud is None:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
-    adjuntos = db.query(Attachment).filter(Attachment.request_code == codigo).all()
+    adjuntos = db.query(Attachment).filter(
+        Attachment.request_code == codigo,
+        Attachment.deleted_at.is_(None),
+    ).all()
 
     historial = (
         db.query(StatusHistory)
@@ -340,13 +380,73 @@ def detalle_solicitud(
 
     return detalle
 
+@app.post("/panel/solicitudes/{codigo}/orden-compra")
+def subir_orden_compra(
+    codigo: str,
+    archivo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    comprador: Buyer = Depends(obtener_comprador_actual)
+):
+    solicitud = db.query(Request).filter(Request.code == codigo).first()
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+    if solicitud.type != "oc":
+        raise HTTPException(
+            status_code=400,
+            detail="Solo las solicitudes de tipo OC admiten orden de compra"
+        )
+
+    if solicitud.status in ESTADOS_CERRADOS:
+        raise HTTPException(
+            status_code=400,
+            detail="No se puede modificar la orden de compra de una solicitud cerrada"
+        )
+
+    if not archivo.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=400,
+            detail="La orden de compra debe ser un archivo PDF"
+        )
+
+    # Guardar primero: si falla, no se toca la OC anterior
+    try:
+        resultado = guardar_archivo(archivo)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Si ya había una OC vigente, se marca como eliminada (borrado lógico)
+    anterior = db.query(Attachment).filter(
+        Attachment.request_code == codigo,
+        Attachment.origin == "purchase_order",
+        Attachment.deleted_at.is_(None),
+    ).first()
+
+    if anterior:
+        anterior.deleted_at = datetime.now(timezone.utc)
+        anterior.deleted_by = comprador.email
+
+    adjunto = Attachment(
+        request_code=codigo,
+        file_url=resultado["file_url"],
+        file_name=resultado["file_name"],
+        origin="purchase_order"
+    )
+    db.add(adjunto)
+    db.commit()
+
+    return {"mensaje": "Orden de compra cargada", "archivo": resultado["file_name"]}
+
 @app.get("/panel/archivos/{archivo_id}")
 def descargar_archivo(
     archivo_id: int,
     comprador: Buyer = Depends(obtener_comprador_actual),
     db: Session = Depends(get_db),
 ):
-    adjunto = db.query(Attachment).filter(Attachment.id == archivo_id).first()
+    adjunto = db.query(Attachment).filter(
+        Attachment.id == archivo_id,
+        Attachment.deleted_at.is_(None),
+    ).first()
     if adjunto is None:
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
 
@@ -357,6 +457,59 @@ def descargar_archivo(
         path=adjunto.file_url,
         filename=adjunto.file_name,
     )
+
+@app.delete("/panel/archivos/{archivo_id}")
+def eliminar_archivo_comprador(
+    archivo_id: int,
+    comprador: Buyer = Depends(obtener_comprador_actual),
+    db: Session = Depends(get_db),
+):
+    archivo = db.query(Attachment).filter(Attachment.id == archivo_id).first()
+    if archivo is None or archivo.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+
+    solicitud = db.query(Request).filter(Request.code == archivo.request_code).first()
+    if solicitud.status in ESTADOS_CERRADOS:
+        raise HTTPException(
+            status_code=400,
+            detail="No se pueden eliminar archivos de una solicitud cerrada",
+        )
+
+    archivo.deleted_at = datetime.now(timezone.utc)
+    archivo.deleted_by = comprador.email
+    db.commit()
+
+    return {"mensaje": "Archivo eliminado", "id": archivo_id}
+
+@app.delete("/archivos/{archivo_id}")
+def eliminar_archivo_solicitante(
+    archivo_id: int,
+    solicitante: Requester = Depends(obtener_solicitante_actual),
+    db: Session = Depends(get_db),
+):
+    archivo = db.query(Attachment).filter(Attachment.id == archivo_id).first()
+    if archivo is None or archivo.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+
+    if archivo.origin != "requester":
+        raise HTTPException(status_code=403, detail="No puedes eliminar este archivo")
+
+    solicitud = db.query(Request).filter(Request.code == archivo.request_code).first()
+
+    if solicitud.requester_email != solicitante.email:
+        raise HTTPException(status_code=403, detail="No puedes eliminar este archivo")
+
+    if solicitud.status != "en_revision":
+        raise HTTPException(
+            status_code=400,
+            detail="Solo puedes eliminar archivos mientras la solicitud está en revisión",
+        )
+
+    archivo.deleted_at = datetime.now(timezone.utc)
+    archivo.deleted_by = solicitante.email
+    db.commit()
+
+    return {"mensaje": "Archivo eliminado", "id": archivo_id}
     
 @app.get("/mi-perfil")
 def ver_mi_perfil(solicitante: Requester = Depends(obtener_solicitante_actual)):
