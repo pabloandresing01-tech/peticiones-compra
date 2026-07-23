@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from database import Base
 
@@ -52,4 +52,24 @@ class Attachment(Base):
     request_code = Column(String, ForeignKey("requests.code"), nullable=False)
     file_url = Column(String, nullable=False)
     file_name = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+class Requester(Base):
+    __tablename__ = "requesters"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, nullable=False, unique=True, index=True)
+    name = Column(String, nullable=True)
+    area = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class MagicLink(Base):
+    __tablename__ = "magic_links"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, nullable=False, index=True)
+    token = Column(String, nullable=False, unique=True, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
